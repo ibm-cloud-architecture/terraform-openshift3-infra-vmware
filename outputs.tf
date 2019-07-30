@@ -77,5 +77,5 @@ output "public_app_vip" {
 # }
 
 output "completed" {
-    value = "${random_id.completed}"
+    value = "${random_id.completed.hex}"
 }
