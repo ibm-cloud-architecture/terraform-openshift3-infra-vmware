@@ -558,15 +558,3 @@ resource "vsphere_virtual_machine" "storage" {
     ]
   }
 }
-
-
-resource "random_id" "completed" {
-    byte_length = 1
-    depends_on = [
-        "vsphere_virtual_machine.bastion",
-        "vsphere_virtual_machine.master",
-        "vsphere_virtual_machine.infra",
-        "vsphere_virtual_machine.worker",
-        "vsphere_virtual_machine.storage",
-    ]
-}
