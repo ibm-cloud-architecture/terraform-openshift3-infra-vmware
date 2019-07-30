@@ -333,3 +333,8 @@ variable "disabled_management_services" {
 
 
 variable "bastion_ssh_key_file" {}
+
+variable "dependencies" {
+    type = "list"
+    default = []
+}

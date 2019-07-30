@@ -75,3 +75,7 @@ output "public_app_vip" {
 # output "kubeconfig" {
 #     value = "${module.kubeconfig.config}"
 # }
+
+output "completed" {
+    value = "${random_id.completed}"
+}
