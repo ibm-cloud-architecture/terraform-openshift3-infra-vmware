@@ -458,6 +458,7 @@ resource "vsphere_virtual_machine" "worker" {
     ]
   }
 }
+
 ##################################
 ### Create the Storage VM
 ##################################
@@ -532,6 +533,99 @@ resource "vsphere_virtual_machine" "storage" {
       network_interface {
         ipv4_address  = "${var.staticipblock != "0.0.0.0/0" ? cidrhost(var.staticipblock, 1 + var.staticipblock_offset + var.bastion["nodes"] + var.master["nodes"] + var.infra["nodes"] + var.worker["nodes"] + count.index) : ""}"
         ipv4_netmask  = "${var.netmask}"
+      }
+
+      ipv4_gateway    = "${var.gateway}"
+      dns_server_list = "${var.dns_servers}"
+    }
+  }
+
+  # Specify the ssh connection
+  connection {
+    user          = "${var.ssh_user}"
+    password      = "${var.ssh_password}"
+    bastion_host  = "${vsphere_virtual_machine.bastion.default_ip_address}"
+  }
+
+  provisioner "file" {
+    source      = "${path.module}/scripts"
+    destination = "/tmp/terraform_scripts"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo chmod u+x /tmp/terraform_scripts/*.sh",
+      "/tmp/terraform_scripts/add-public-ssh-key.sh \"${local.public_ssh_key}\"",
+    ]
+  }
+}
+
+##################################
+### Create the HAProxy VM
+##################################
+resource "vsphere_virtual_machine" "haproxy" {
+  #depends_on = ["vsphere_folder.ocpenv"]
+  folder     = "${local.folder_path}"
+
+  #####
+  # VM Specifications
+  ####
+  count            = "${var.haproxy["nodes"]}"
+  resource_pool_id = "${data.vsphere_resource_pool.pool.id}"
+
+  name     = "${format("${lower(var.instance_name)}-haproxy-%02d", count.index + 1) }"
+  num_cpus = "${var.haproxy["vcpu"]}"
+  memory   = "${var.haproxy["memory"]}"
+
+
+  ####
+  # Disk specifications
+  ####
+  datastore_id  = "${data.vsphere_datastore.datastore.id}"
+  guest_id      = "${data.vsphere_virtual_machine.template.guest_id}"
+  scsi_type     = "${data.vsphere_virtual_machine.template.scsi_type}"
+
+  disk {
+    label            = "${format("${lower(var.instance_name)}-haproxy-%02d.vmdk", count.index + 1) }"
+    size             = "${var.haproxy["disk_size"]        != "" ? var.haproxy["disk_size"]        : data.vsphere_virtual_machine.template.disks.0.size}"
+    eagerly_scrub    = "${var.haproxy["eagerly_scrub"]    != "" ? var.haproxy["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+    thin_provisioned = "${var.haproxy["thin_provisioned"] != "" ? var.haproxy["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+    keep_on_remove   = "${var.haproxy["keep_disk_on_remove"]}"
+  }
+
+  ####
+  # Network specifications
+  ####
+  network_interface {
+    network_id   = "${data.vsphere_network.network.id}"
+    adapter_type = "${data.vsphere_virtual_machine.template.network_interface_types[0]}"
+  }
+
+  network_interface {
+    network_id   = "${data.vsphere_network.bastion.id}"
+    adapter_type = "${data.vsphere_virtual_machine.template.network_interface_types[0]}"
+  }
+
+  ####
+  # VM Customizations
+  ####
+  clone {
+    template_uuid = "${data.vsphere_virtual_machine.template.id}"
+
+    customize {
+      linux_options {
+        host_name = "${format("${lower(var.instance_name)}-haproxy-%02d", count.index + 1) }"
+        domain    = "${var.domain != "" ? var.domain : format("%s.local", var.instance_name)}"
+      }
+
+      network_interface {
+        ipv4_address  = "${var.staticipblock != "0.0.0.0/0" ? cidrhost(var.staticipblock, 1 + var.staticipblock_offset + var.bastion["nodes"] + var.master["nodes"] + var.["nodes"] + var.worker["nodes"]  + var.storage["nodes"] + count.index) : ""}"
+        ipv4_netmask  = "${var.netmask}"
+      }
+
+      network_interface {
+        ipv4_address  = "${var.bastion_staticipblock != "0.0.0.0/0" ? cidrhost(var.bastion_staticipblock, 1 + var.bastion_staticipblock_offset + var.bastion["nodes"] + count.index) : ""}"
+        ipv4_netmask  = "${var.bastion_netmask}"
       }
 
       ipv4_gateway    = "${var.gateway}"
