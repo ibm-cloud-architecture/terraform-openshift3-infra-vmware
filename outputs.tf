@@ -61,6 +61,14 @@ output "storage_hostname" {
 #################################################
 # Output LBaaS VIP
 #################################################
+output "public_haproxy_ip" {
+    value = "${vsphere_virtual_machine.haproxy.*.default_ip_address}"
+}
+
+output "haproxy_hostname" {
+    value = "${vsphere_virtual_machine.haproxy.*.name}"
+}
+
 output "public_master_vip" {
     value = "ocp-vmware-master.rtp.raleigh.ibm.com"
 }
