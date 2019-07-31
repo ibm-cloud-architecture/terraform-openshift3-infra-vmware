@@ -560,6 +560,7 @@ resource "vsphere_virtual_machine" "storage" {
   }
 }
 
+
 ##################################
 ### Create the HAProxy VM
 ##################################
@@ -619,17 +620,17 @@ resource "vsphere_virtual_machine" "haproxy" {
       }
 
       network_interface {
-        ipv4_address  = "${var.staticipblock != "0.0.0.0/0" ? cidrhost(var.staticipblock, 1 + var.staticipblock_offset + var.bastion["nodes"] + var.master["nodes"] + var.["nodes"] + var.worker["nodes"]  + var.storage["nodes"] + count.index) : ""}"
-        ipv4_netmask  = "${var.netmask}"
-      }
-
-      network_interface {
         ipv4_address  = "${var.bastion_staticipblock != "0.0.0.0/0" ? cidrhost(var.bastion_staticipblock, 1 + var.bastion_staticipblock_offset + var.bastion["nodes"] + count.index) : ""}"
         ipv4_netmask  = "${var.bastion_netmask}"
       }
 
-      ipv4_gateway    = "${var.gateway}"
-      dns_server_list = "${var.dns_servers}"
+      network_interface {
+        ipv4_address  = "${var.staticipblock != "0.0.0.0/0" ? cidrhost(var.staticipblock, 1 + var.staticipblock_offset + var.bastion["nodes"] + var.master["nodes"] + var.infra["nodes"] + var.worker["nodes"]  + var.storage["nodes"] + count.index) : ""}"
+        ipv4_netmask  = "${var.netmask}"
+      }
+
+      ipv4_gateway    = "${var.bastion_gateway}"
+      dns_server_list = "${concat(var.bastion_dns_servers, var.dns_servers)}"
     }
   }
 
