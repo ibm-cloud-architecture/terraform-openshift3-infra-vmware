@@ -28,7 +28,7 @@ module "infrastructure" {
   bastion_network_label        = "${var.bastion_network_label}"
   datastore                    = "${var.datastore}"
   template                     = "${var.template}"
-  folder                       = "${var.hostname_prefix}"
+  folder                       = "${var.vsphere_folder}"
   instance_name                = "${var.hostname_prefix}"
   domain                       = "${var.domain}"
   bastion_staticipblock        = "${var.bastion_staticipblock}"

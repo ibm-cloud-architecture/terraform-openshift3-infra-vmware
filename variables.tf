@@ -210,7 +210,7 @@ variable "storage" {
   type = "map"
 
     default = {
-    nodes  = "1"
+    nodes  = "3"
     vcpu   = "8"
     memory = "16384"
 

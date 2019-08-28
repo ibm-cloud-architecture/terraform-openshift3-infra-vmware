@@ -85,7 +85,6 @@ resource "vsphere_virtual_machine" "bastion" {
   memory    = "${var.bastion["memory"]}"
 
   scsi_controller_count = 1
-  scsi_type = "lsilogic-sas"
 
   ####
   # Disk specifications
@@ -180,7 +179,6 @@ resource "vsphere_virtual_machine" "master" {
   memory    = "${var.master["memory"]}"
 
   scsi_controller_count = 1
-  scsi_type = "lsilogic-sas"
 
   ####
   # Disk specifications
