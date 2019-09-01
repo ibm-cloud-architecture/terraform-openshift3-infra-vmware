@@ -71,9 +71,6 @@ module "infrastructure" {
 |storage_private_ip|Provate IPv4 addresses of Storage Node vms|list|
 |storage_hostname|hostnames of Master Storage vms|list|
 
-
-The infrastructure is provisioned using the terraform modules with the following configuration:
-
 ## Nodes
 
 Nodes are VM_instances that serve a specific purpose for OpenShift Container Platform
