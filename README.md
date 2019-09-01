@@ -32,12 +32,12 @@ module "infrastructure" {
 
   # optional parameters - if set, we will put the bastion host on the public network and use the public network IP to configure the other VMs
   public_network_id            = "<public network label>"
-  public_staticipblock         = "<cidr block of static ips> # routable from the terraform VM, e.g. 172.16.0.0/24"
-  public_staticipblock_offset  = "<offset>"                  # for example, set to 0 and the first IP will be 172.16.0.1
-  public_gateway               = "<public network gateway>"  # becomes the default route for the bastion host
-  public_netmask               = "<netmask>"                 # e.g. 24
-  public_domain                = "<public network domain>"   # added to the search suffix list
-  public_dns_servers           = ["<dns3>"]                  # added to nameserver
+  public_staticipblock         = "<cidr block of static ips>" # routable from the terraform VM, e.g. 172.16.0.0/24
+  public_staticipblock_offset  = "<offset>"                   # for example, set to 0 and the first IP will be 172.16.0.1
+  public_gateway               = "<public network gateway>"   # becomes the default route for the bastion host
+  public_netmask               = "<netmask>"                  # e.g. 24
+  public_domain                = "<public network domain>"    # added to the search suffix list
+  public_dns_servers           = ["<dns3>"]                   # added to nameserver
 
   # how to ssh into the template - must be able to passwordless sudo
   template_ssh_user            = "<ssh user>"
