@@ -3,11 +3,16 @@
 # #################################################
 #
 output "bastion_public_ip" {
-    value = "${vsphere_virtual_machine.bastion.*.default_ip_address[0]}"
+  value = "${element(compact(concat(vsphere_virtual_machine.bastion.*.default_ip_address, vsphere_virtual_machine.bastion_ds_cluster.*.default_ip_address)), 0)}"
+}
+
+# always the first private IP
+output "bastion_private_ip" {
+  value = "${element(data.template_file.private_ips.*.rendered, 0)}"
 }
 
 output "bastion_hostname" {
-    value = "${vsphere_virtual_machine.bastion.*.name[0]}"
+  value = "${element(compact(concat(vsphere_virtual_machine.bastion.*.name, vsphere_virtual_machine.bastion_ds_cluster.*.name)), 0)}"
 }
 
 
@@ -15,11 +20,11 @@ output "bastion_hostname" {
 # Output Master Node
 #################################################
 output "master_private_ip" {
-    value = "${vsphere_virtual_machine.master.*.default_ip_address}"
+  value = "${compact(concat(vsphere_virtual_machine.master.*.default_ip_address, vsphere_virtual_machine.master_ds_cluster.*.default_ip_address))}"
 }
 
 output "master_hostname" {
-    value = "${vsphere_virtual_machine.master.*.name}"
+  value = "${compact(concat(vsphere_virtual_machine.master.*.name, vsphere_virtual_machine.master_ds_cluster.*.name))}"
 }
 
 
@@ -27,23 +32,23 @@ output "master_hostname" {
 # Output Infra Node
 #################################################
 output "infra_private_ip" {
-    value = "${vsphere_virtual_machine.infra.*.default_ip_address}"
+  value = "${compact(concat(vsphere_virtual_machine.infra.*.default_ip_address, vsphere_virtual_machine.infra_ds_cluster.*.default_ip_address))}"
 }
 
 output "infra_hostname" {
-    value = "${vsphere_virtual_machine.infra.*.name}"
+  value = "${compact(concat(vsphere_virtual_machine.infra.*.name, vsphere_virtual_machine.infra_ds_cluster.*.name))}"
 }
 
 
 #################################################
 # Output App Node
 #################################################
-output "app_private_ip" {
-    value = "${vsphere_virtual_machine.worker.*.default_ip_address}"
+output "worker_private_ip" {
+  value = "${compact(concat(vsphere_virtual_machine.worker.*.default_ip_address, vsphere_virtual_machine.worker_ds_cluster.*.default_ip_address))}"
 }
 
-output "app_hostname" {
-    value = "${vsphere_virtual_machine.worker.*.name}"
+output "worker_hostname" {
+  value = "${compact(concat(vsphere_virtual_machine.worker.*.name, vsphere_virtual_machine.worker_ds_cluster.*.name))}"
 }
 
 
@@ -51,35 +56,10 @@ output "app_hostname" {
 # Output Storage Node
 #################################################
 output "storage_private_ip" {
-    value = "${vsphere_virtual_machine.storage.*.default_ip_address}"
+  value = "${compact(concat(vsphere_virtual_machine.storage.*.default_ip_address, vsphere_virtual_machine.storage_ds_cluster.*.default_ip_address))}"
 }
 
 output "storage_hostname" {
-    value = "${vsphere_virtual_machine.storage.*.name}"
+  value = "${compact(concat(vsphere_virtual_machine.storage.*.name, vsphere_virtual_machine.storage_ds_cluster.*.name))}"
 }
 
-#################################################
-# Output LBaaS VIP
-#################################################
-output "haproxy_public_ip" {
-    value = "${vsphere_virtual_machine.haproxy.*.default_ip_address}"
-}
-
-output "haproxy_hostname" {
-    value = "${vsphere_virtual_machine.haproxy.*.name}"
-}
-
-output "public_master_vip" {
-    value = "ocp-vmware-master.rtp.raleigh.ibm.com"
-}
-
-output "public_app_vip" {
-    value = "ocp-vmware-apps.rtp.raleigh.ibm.com"
-}
-
-#################################################
-# Output OpenShift
-#################################################
-# output "kubeconfig" {
-#     value = "${module.kubeconfig.config}"
-# }

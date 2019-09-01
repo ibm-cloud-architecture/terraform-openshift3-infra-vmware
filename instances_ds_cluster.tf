@@ -1,47 +1,17 @@
 #################################
 # Configure the VMware vSphere Provider
 ##################################
-provider "vsphere" {
-  version        = "~> 1.1"
-  vsphere_server = "${var.vsphere_server}"
-
-  # if you have a self-signed cert
-  allow_unverified_ssl = "${var.allow_unverified_ssl}"
-}
-
-data "vsphere_virtual_machine" "template" {
-  name              = "${var.template}"
-  datacenter_id   = "${var.vsphere_datacenter_id}"
-}
-
-locals {
-  node_count = "${var.bastion["nodes"] + var.master["nodes"] + var.infra["nodes"] + var.worker["nodes"] + var.storage["nodes"]}"
-  gateways = ["${compact(list(var.public_gateway, var.private_gateway))}"]
-}
-
-data "template_file" "private_ips" {
-  count = "${local.node_count}"
-
-  template = "${cidrhost(var.private_staticipblock, 1 + var.private_staticipblock_offset + count.index)}"
-}
-
-data "template_file" "public_ips" {
-  count = "${var.public_network_id != "" ? var.bastion["nodes"] : 0}"
-
-  template = "${cidrhost(var.public_staticipblock, 1 + var.public_staticipblock_offset + count.index)}"
-}
-
 ##################################
 #### Create the Bastion VM
 ##################################
-resource "vsphere_virtual_machine" "bastion" {
+resource "vsphere_virtual_machine" "bastion_ds_cluster" {
   #depends_on = ["vsphere_folder.ocpenv"]
   folder     = "${var.folder_path}"
 
   #####
   # VM Specifications
   ####
-  count            = "${var.datastore_id != "" ? var.bastion["nodes"] : 0}"
+  count            = "${var.datastore_cluster_id != "" ? var.bastion["nodes"] : 0}"
   resource_pool_id = "${var.vsphere_resource_pool_id}"
 
   name      = "${format("${lower(var.instance_name)}-bastion-%02d", count.index + 1) }"
@@ -53,7 +23,7 @@ resource "vsphere_virtual_machine" "bastion" {
   ####
   # Disk specifications
   ####
-  datastore_id  = "${var.datastore_id}"
+  datastore_cluster_id  = "${var.datastore_cluster_id}"
   guest_id      = "${data.vsphere_virtual_machine.template.guest_id}"
   scsi_type     = "${data.vsphere_virtual_machine.template.scsi_type}"
 
@@ -97,14 +67,13 @@ resource "vsphere_virtual_machine" "bastion" {
         }
       }
 
-      # set the default gateway to public if available.  TODO: static routes for private network
       ipv4_gateway    = "${var.public_gateway != "" ? var.public_gateway : var.private_gateway}"
-
-      dns_server_list = ["${concat(var.private_dns_servers, var.public_dns_servers)}"]
+      dns_server_list = compact(concat(var.private_dns_servers, var.public_dns_servers))
       dns_suffix_list = compact(list(var.private_domain, var.public_domain))
+
     }
   }
-
+  
   # Specify the ssh connection
   connection {
     host          = "${self.default_ip_address}"
@@ -125,21 +94,19 @@ resource "vsphere_virtual_machine" "bastion" {
       "/tmp/terraform_scripts/add-public-ssh-key.sh \"${var.ssh_public_key}\""
     ]
   }
-
 }
-
 
 ##################################
 #### Create the Master VM
 ##################################
-resource "vsphere_virtual_machine" "master" {
+resource "vsphere_virtual_machine" "master_ds_cluster" {
   #depends_on = ["vsphere_folder.ocpenv"]
-  folder      = "${var.folder_path}"
+  folder     = "${var.folder_path}"
 
   #####
   # VM Specifications
   ####
-  count            = "${var.datastore_id != "" ? var.master["nodes"] : 0}"
+  count            = "${var.datastore_cluster_id != "" ? var.master["nodes"] : 0}"
   resource_pool_id = "${var.vsphere_resource_pool_id}"
 
   name      = "${format("${lower(var.instance_name)}-master-%02d", count.index + 1) }"
@@ -151,7 +118,7 @@ resource "vsphere_virtual_machine" "master" {
   ####
   # Disk specifications
   ####
-  datastore_id  = "${var.datastore_id}"
+  datastore_cluster_id  = "${var.datastore_cluster_id}"
   guest_id      = "${data.vsphere_virtual_machine.template.guest_id}"
   scsi_type     = "${data.vsphere_virtual_machine.template.scsi_type}"
 
@@ -192,7 +159,7 @@ resource "vsphere_virtual_machine" "master" {
         host_name = "${format("${lower(var.instance_name)}-master-%02d", count.index + 1) }"
         domain    = "${var.private_domain != "" ? var.private_domain : format("%s.local", var.instance_name)}"
       }
-
+      
       network_interface {
         ipv4_address  = "${element(data.template_file.private_ips.*.rendered, var.bastion["nodes"] + count.index)}"
         ipv4_netmask  = "${var.private_netmask}"
@@ -211,10 +178,11 @@ resource "vsphere_virtual_machine" "master" {
     password      = "${var.template_ssh_password}"
     private_key   = "${var.template_ssh_private_key}"
 
-    bastion_host          = "${vsphere_virtual_machine.bastion.0.default_ip_address}"
+    bastion_host          = "${vsphere_virtual_machine.bastion_ds_cluster.0.default_ip_address}"
     bastion_user          = "${var.template_ssh_user}"
     bastion_password      = "${var.template_ssh_password}"
     bastion_private_key   = "${var.template_ssh_private_key}"
+   
   }
 
   provisioner "file" {
@@ -228,20 +196,20 @@ resource "vsphere_virtual_machine" "master" {
       "/tmp/terraform_scripts/add-public-ssh-key.sh \"${var.ssh_public_key}\""
     ]
   }
-
+ 
 }
 
 ##################################
 ### Create the Infra VM
 ##################################
-resource "vsphere_virtual_machine" "infra" {
+resource "vsphere_virtual_machine" "infra_ds_cluster" {
   #depends_on = ["vsphere_folder.ocpenv"]
-  folder      = "${var.folder_path}"
+  folder     = "${var.folder_path}"
 
   #####
   # VM Specifications
   ####
-  count            = "${var.datastore_id != "" ? var.infra["nodes"] : 0}"
+  count            = "${var.datastore_cluster_id != "" ? var.infra["nodes"] : 0}"
   resource_pool_id = "${var.vsphere_resource_pool_id}"
 
   name     = "${format("${lower(var.instance_name)}-infra-%02d", count.index + 1) }"
@@ -252,7 +220,7 @@ resource "vsphere_virtual_machine" "infra" {
   ####
   # Disk specifications
   ####
-  datastore_id  = "${var.datastore_id}"
+  datastore_cluster_id  = "${var.datastore_cluster_id}"
   guest_id      = "${data.vsphere_virtual_machine.template.guest_id}"
   scsi_type     = "${data.vsphere_virtual_machine.template.scsi_type}"
 
@@ -307,19 +275,19 @@ resource "vsphere_virtual_machine" "infra" {
       dns_suffix_list = ["${var.private_domain}"]
     }
   }
-
+ 
   # Specify the ssh connection
   connection {
     host          = "${self.default_ip_address}"
     user          = "${var.template_ssh_user}"
     password      = "${var.template_ssh_password}"
     private_key   = "${var.template_ssh_private_key}"
- 
-    bastion_host          = "${vsphere_virtual_machine.bastion.0.default_ip_address}"
+
+    bastion_host          = "${vsphere_virtual_machine.bastion_ds_cluster.0.default_ip_address}"
     bastion_user          = "${var.template_ssh_user}"
     bastion_password      = "${var.template_ssh_password}"
     bastion_private_key   = "${var.template_ssh_private_key}"
-   
+
   }
 
   provisioner "file" {
@@ -333,29 +301,31 @@ resource "vsphere_virtual_machine" "infra" {
       "/tmp/terraform_scripts/add-public-ssh-key.sh \"${var.ssh_public_key}\""
     ]
   }
+ 
 }
 
 ##################################
 ### Create the Worker VM
 ##################################
-resource "vsphere_virtual_machine" "worker" {
+resource "vsphere_virtual_machine" "worker_ds_cluster" {
   #depends_on = ["vsphere_folder.ocpenv"]
-  folder      = "${var.folder_path}"
+  folder     = "${var.folder_path}"
 
   #####
   # VM Specifications
   ####
-  count            = "${var.datastore_id != "" ? var.worker["nodes"] : 0}"
+  count            = "${var.datastore_cluster_id != "" ? var.worker["nodes"] : 0}"
   resource_pool_id = "${var.vsphere_resource_pool_id}"
 
   name     = "${format("${lower(var.instance_name)}-worker-%02d", count.index + 1) }"
   num_cpus = "${var.worker["vcpu"]}"
   memory   = "${var.worker["memory"]}"
 
+
   #####
   # Disk Specifications
   ####
-  datastore_id  = "${var.datastore_id}"
+  datastore_cluster_id  = "${var.datastore_cluster_id}"
   guest_id      = "${data.vsphere_virtual_machine.template.guest_id}"
   scsi_type     = "${data.vsphere_virtual_machine.template.scsi_type}"
 
@@ -420,7 +390,7 @@ resource "vsphere_virtual_machine" "worker" {
     password      = "${var.template_ssh_password}"
     private_key   = "${var.template_ssh_private_key}"
  
-    bastion_host          = "${vsphere_virtual_machine.bastion.0.default_ip_address}"
+    bastion_host          = "${vsphere_virtual_machine.bastion_ds_cluster.0.default_ip_address}"
     bastion_user          = "${var.template_ssh_user}"
     bastion_password      = "${var.template_ssh_password}"
     bastion_private_key   = "${var.template_ssh_private_key}"
@@ -438,20 +408,20 @@ resource "vsphere_virtual_machine" "worker" {
       "/tmp/terraform_scripts/add-public-ssh-key.sh \"${var.ssh_public_key}\""
     ]
   }
-
+ 
 }
 
 ##################################
 ### Create the Storage VM
 ##################################
-resource "vsphere_virtual_machine" "storage" {
+resource "vsphere_virtual_machine" "storage_ds_cluster" {
   #depends_on = ["vsphere_folder.ocpenv"]
-  folder      = "${var.folder_path}"
+  folder     = "${var.folder_path}"
 
   #####
   # VM Specifications
   ####
-  count            = "${var.datastore_id != "" ? var.storage["nodes"] : 0}"
+  count            = "${var.datastore_cluster_id != "" ? var.storage["nodes"] : 0}"
   resource_pool_id = "${var.vsphere_resource_pool_id}"
 
   name     = "${format("${lower(var.instance_name)}-storage-%02d", count.index + 1) }"
@@ -462,7 +432,7 @@ resource "vsphere_virtual_machine" "storage" {
   #####
   # Disk Specifications
   ####
-  datastore_id  = "${var.datastore_id}"
+  datastore_cluster_id  = "${var.datastore_cluster_id}"
   guest_id      = "${data.vsphere_virtual_machine.template.guest_id}"
   scsi_type     = "${data.vsphere_virtual_machine.template.scsi_type}"
 
@@ -537,7 +507,7 @@ resource "vsphere_virtual_machine" "storage" {
     password      = "${var.template_ssh_password}"
     private_key   = "${var.template_ssh_private_key}"
 
-    bastion_host          = "${vsphere_virtual_machine.bastion.0.default_ip_address}"
+    bastion_host          = "${vsphere_virtual_machine.bastion_ds_cluster.0.default_ip_address}"
     bastion_user          = "${var.template_ssh_user}"
     bastion_password      = "${var.template_ssh_password}"
     bastion_private_key   = "${var.template_ssh_private_key}"
@@ -555,6 +525,7 @@ resource "vsphere_virtual_machine" "storage" {
       "/tmp/terraform_scripts/add-public-ssh-key.sh \"${var.ssh_public_key}\""
     ]
   }
+ 
 }
 
 
