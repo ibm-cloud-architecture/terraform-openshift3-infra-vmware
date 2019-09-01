@@ -136,10 +136,10 @@ You can use [terraform-dns-cloudflare](https://github.com/ibm-cloud-architecture
 
 A subscription to the following channels is required in order to deploy this reference environment’s configuration.
 
-You can use [terraform-openshift-rhnregister](https://github.ibm.com/ncolon/terraform-openshift-rhnregister) module to register your VMs with RHN
+You can use [terraform-openshift-rhnregister](https://github.com/ibm-cloud-architecture/terraform-openshift-rhnregister) module to register your VMs with RHN
 
-|Channel|Repository Name|
-|-------|---------------|
+|Channel|Repository Name| 
+ |-------|---------------|
 |Red Hat® Enterprise Linux 7 Server (RPMs)|rhel-7-server-rpms|
 |Red Hat® OpenShift Enterprise 3.10 (RPMs)|rhel-7-server-ose-3.10-rpms|
 |Red Hat® Enterprise Linux 7 Server - Extras (RPMs)|rhel-7-server-extras-rpms|
