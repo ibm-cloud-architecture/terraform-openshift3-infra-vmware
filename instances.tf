@@ -154,6 +154,7 @@ resource "vsphere_virtual_machine" "master" {
   datastore_id  = "${var.datastore_id}"
   guest_id      = "${data.vsphere_virtual_machine.template.guest_id}"
   scsi_type     = "${data.vsphere_virtual_machine.template.scsi_type}"
+  enable_disk_uuid = true
 
   disk {
     label            = "disk0"
@@ -248,13 +249,13 @@ resource "vsphere_virtual_machine" "infra" {
   num_cpus = "${var.infra["vcpu"]}"
   memory   = "${var.infra["memory"]}"
 
-
   ####
   # Disk specifications
   ####
   datastore_id  = "${var.datastore_id}"
   guest_id      = "${data.vsphere_virtual_machine.template.guest_id}"
   scsi_type     = "${data.vsphere_virtual_machine.template.scsi_type}"
+  enable_disk_uuid = true
 
   disk {
     label            = "disk0"
@@ -358,6 +359,7 @@ resource "vsphere_virtual_machine" "worker" {
   datastore_id  = "${var.datastore_id}"
   guest_id      = "${data.vsphere_virtual_machine.template.guest_id}"
   scsi_type     = "${data.vsphere_virtual_machine.template.scsi_type}"
+  enable_disk_uuid = true
 
   disk {
     label            = "disk0"
@@ -465,6 +467,7 @@ resource "vsphere_virtual_machine" "storage" {
   datastore_id  = "${var.datastore_id}"
   guest_id      = "${data.vsphere_virtual_machine.template.guest_id}"
   scsi_type     = "${data.vsphere_virtual_machine.template.scsi_type}"
+  enable_disk_uuid = true
 
   disk {
     label            = "disk0"
