@@ -66,6 +66,16 @@ resource "vsphere_virtual_machine" "bastion" {
     unit_number      = 0
   }
 
+  disk {
+    label            = "disk1"
+    size             = "${var.bastion["docker_disk_size"]}"
+    eagerly_scrub    = "${var.bastion["eagerly_scrub"]    != "" ? var.bastion["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+    thin_provisioned = "${var.bastion["thin_provisioned"] != "" ? var.bastion["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+    keep_on_remove   = "${var.bastion["keep_disk_on_remove"]}"
+    unit_number      = 1
+  }
+
+
   ####
   # Network specifications
   ####
