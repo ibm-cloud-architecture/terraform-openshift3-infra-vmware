@@ -14,22 +14,6 @@ data "vsphere_virtual_machine" "template" {
   datacenter_id   = "${var.vsphere_datacenter_id}"
 }
 
-locals {
-  node_count = "${var.bastion["nodes"] + var.master["nodes"] + var.infra["nodes"] + var.worker["nodes"] + var.storage["nodes"]}"
-  gateways = ["${compact(list(var.public_gateway, var.private_gateway))}"]
-}
-
-data "template_file" "private_ips" {
-  count = "${local.node_count}"
-
-  template = "${cidrhost(var.private_staticipblock, 1 + var.private_staticipblock_offset + count.index)}"
-}
-
-data "template_file" "public_ips" {
-  count = "${var.public_network_id != "" ? var.bastion["nodes"] : 0}"
-
-  template = "${cidrhost(var.public_staticipblock, 1 + var.public_staticipblock_offset + count.index)}"
-}
 
 ##################################
 #### Create the Bastion VM
@@ -102,7 +86,7 @@ resource "vsphere_virtual_machine" "bastion" {
       dynamic "network_interface" {
         for_each = compact(concat(list(var.public_network_id, var.private_network_id)))
         content {
-          ipv4_address = "${element(concat(data.template_file.public_ips.*.rendered, data.template_file.private_ips.*.rendered), network_interface.key)}"
+          ipv4_address = "${element(concat(data.template_file.public_ips.*.rendered, data.template_file.bastion_private_ips.*.rendered), network_interface.key)}"
           ipv4_netmask = "${element(compact(concat(list(var.public_netmask), list(var.private_netmask))), network_interface.key)}"
         }
       }
@@ -205,7 +189,7 @@ resource "vsphere_virtual_machine" "master" {
       }
 
       network_interface {
-        ipv4_address  = "${element(data.template_file.private_ips.*.rendered, var.bastion["nodes"] + count.index)}"
+        ipv4_address  = "${element(data.template_file.master_private_ips.*.rendered, count.index)}"
         ipv4_netmask  = "${var.private_netmask}"
       }
 
@@ -248,6 +232,13 @@ resource "vsphere_virtual_machine" "master" {
 resource "vsphere_virtual_machine" "infra" {
   #depends_on = ["vsphere_folder.ocpenv"]
   folder      = "${var.folder_path}"
+
+  lifecycle {
+    ignore_changes = [
+      "disk"
+    ]
+  }
+
 
   #####
   # VM Specifications
@@ -306,10 +297,7 @@ resource "vsphere_virtual_machine" "infra" {
       }
 
       network_interface {
-        ipv4_address  = "${element(data.template_file.private_ips.*.rendered, 
-          var.bastion["nodes"] + 
-          var.master["nodes"] + 
-          count.index)}"
+        ipv4_address  = "${element(data.template_file.infra_private_ips.*.rendered, count.index)}"
         ipv4_netmask  = "${var.private_netmask}"
       }
 
@@ -352,6 +340,12 @@ resource "vsphere_virtual_machine" "infra" {
 resource "vsphere_virtual_machine" "worker" {
   #depends_on = ["vsphere_folder.ocpenv"]
   folder      = "${var.folder_path}"
+
+  lifecycle {
+    ignore_changes = [
+      "disk"
+    ]
+  }
 
   #####
   # VM Specifications
@@ -411,11 +405,7 @@ resource "vsphere_virtual_machine" "worker" {
       }
 
       network_interface {
-        ipv4_address  = "${element(data.template_file.private_ips.*.rendered, 
-          var.bastion["nodes"] + 
-          var.master["nodes"] + 
-          var.infra["nodes"] + 
-          count.index)}"
+        ipv4_address  = "${element(data.template_file.worker_private_ips.*.rendered, count.index)}"
         ipv4_netmask  = "${var.private_netmask}"
       }
 
@@ -497,13 +487,16 @@ resource "vsphere_virtual_machine" "storage" {
     unit_number      = 1
   }
 
-  disk {
-    label            = "disk2"
-    size             = "${var.storage["gluster_disk_size"]}"
-    eagerly_scrub    = "${var.storage["eagerly_scrub"]    != "" ? var.storage["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
-    thin_provisioned = "${var.storage["thin_provisioned"] != "" ? var.storage["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
-    keep_on_remove   = "${var.storage["keep_disk_on_remove"]}"
-    unit_number      = 2
+  dynamic "disk" {
+    for_each = [for disk_num in range(var.storage["gluster_num_disks"]): disk_num + 2]
+    content {
+      label            = "${format("disk%d", disk.value)}"
+      size             = "${var.storage["gluster_disk_size"]}"
+      eagerly_scrub    = "${var.storage["eagerly_scrub"]    != "" ? var.storage["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+      thin_provisioned = "${var.storage["thin_provisioned"] != "" ? var.storage["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+      keep_on_remove   = "${var.storage["keep_disk_on_remove"]}"
+      unit_number      = disk.value
+    }
   }
 
   ####
@@ -528,12 +521,7 @@ resource "vsphere_virtual_machine" "storage" {
       }
 
       network_interface {
-        ipv4_address  = "${element(data.template_file.private_ips.*.rendered, 
-          var.bastion["nodes"] + 
-          var.master["nodes"] + 
-          var.infra["nodes"] + 
-          var.worker["nodes"] + 
-          count.index)}"
+        ipv4_address  = "${element(data.template_file.storage_private_ips.*.rendered, count.index)}"
         ipv4_netmask  = "${var.private_netmask}"
       }
 

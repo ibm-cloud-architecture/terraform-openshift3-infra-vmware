@@ -8,7 +8,7 @@ output "bastion_public_ip" {
 
 # always the first private IP
 output "bastion_private_ip" {
-  value = "${element(data.template_file.private_ips.*.rendered, 0)}"
+  value = "${element(data.template_file.bastion_private_ips.*.rendered, 0)}"
 }
 
 output "bastion_hostname" {
