@@ -94,8 +94,8 @@ resource "vsphere_virtual_machine" "bastion" {
       # set the default gateway to public if available.  TODO: static routes for private network
       ipv4_gateway    = "${var.public_gateway != "" ? var.public_gateway : var.private_gateway}"
 
-      dns_server_list = ["${concat(var.private_dns_servers, var.public_dns_servers)}"]
-      dns_suffix_list = compact(list(var.private_domain, var.public_domain))
+      dns_server_list = compact(concat(var.private_dns_servers, var.public_dns_servers))
+      dns_suffix_list = compact(list(var.private_domain, var.public_domain))   
     }
   }
 
