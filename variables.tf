@@ -157,7 +157,7 @@ variable "bastion" {
     default = {
         nodes  = "1"
         vcpu   = "2"
-        memory = "8192"
+        memory = "4096"
 
         disk_size             = ""      # Specify size or leave empty to use same size as template.
         thin_provisioned      = ""      # True or false. Whether to use thin provisioning on the disk. Leave blank to use same as template
@@ -172,7 +172,7 @@ variable "master" {
   default = {
     nodes  = "1"
     vcpu   = "8"
-    memory = "16384"
+    memory = "32768"
 
     disk_size             = ""      # Specify size or leave empty to use same size as template.
     docker_disk_size      = "100"   # Specify size for docker disk, default 100.
@@ -187,8 +187,8 @@ variable "infra" {
 
   default = {
     nodes  = "1"
-    vcpu   = "2"
-    memory = "4096"
+    vcpu   = "8"
+    memory = "32768"
 
     disk_size           = ""      # Specify size or leave empty to use same size as template.
     docker_disk_size    = "100"   # Specify size for docker disk, default 100.
@@ -202,7 +202,7 @@ variable "worker" {
   type = "map"
 
   default = {
-    nodes  = "1"
+    nodes  = "3"
     vcpu   = "4"
     memory = "16384"
 
