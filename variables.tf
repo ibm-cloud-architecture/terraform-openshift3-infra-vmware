@@ -117,6 +117,37 @@ variable "public_domain" {
     default = ""
 }
 
+variable "bastion_ip_address" {
+  description = "specify bastion ip addresses individually if they are not contiguous, will override static ip block selection"
+  type = "list"
+  default = []
+}
+
+variable "master_ip_address" {
+  description = "specify master ip addresses individually if they are not contiguous, will override static ip block selection"
+  type = "list"
+  default = []
+}
+
+variable "infra_ip_address" {
+  description = "specify infra ip addresses individually if they are not contiguous, will override static ip block selection"
+  type = "list"
+  default = []
+}
+
+variable "worker_ip_address" {
+  description = "specify worker ip addresses individually if they are not contiguous, will override static ip block selection"
+  type = "list"
+  default = []
+}
+
+
+variable "storage_ip_address" {
+  description = "specify storage ip addresses individually if they are not contiguous, will override static ip block selection"
+  type = "list"
+  default = []
+}
+
 #################################
 ##### ICP Instance details ######
 #################################
@@ -126,7 +157,7 @@ variable "bastion" {
     default = {
         nodes  = "1"
         vcpu   = "2"
-        memory = "8192"
+        memory = "4096"
 
         disk_size             = ""      # Specify size or leave empty to use same size as template.
         thin_provisioned      = ""      # True or false. Whether to use thin provisioning on the disk. Leave blank to use same as template
@@ -141,7 +172,7 @@ variable "master" {
   default = {
     nodes  = "1"
     vcpu   = "8"
-    memory = "16384"
+    memory = "32768"
 
     disk_size             = ""      # Specify size or leave empty to use same size as template.
     docker_disk_size      = "100"   # Specify size for docker disk, default 100.
@@ -156,8 +187,8 @@ variable "infra" {
 
   default = {
     nodes  = "1"
-    vcpu   = "2"
-    memory = "4096"
+    vcpu   = "8"
+    memory = "32768"
 
     disk_size           = ""      # Specify size or leave empty to use same size as template.
     docker_disk_size    = "100"   # Specify size for docker disk, default 100.
@@ -171,7 +202,7 @@ variable "worker" {
   type = "map"
 
   default = {
-    nodes  = "1"
+    nodes  = "3"
     vcpu   = "4"
     memory = "16384"
 
@@ -193,6 +224,7 @@ variable "storage" {
 
     disk_size           = ""      # Specify size or leave empty to use same size as template.
     docker_disk_size    = "100"   # Specify size for docker disk, default 100.
+    gluster_num_disks   = 1
     gluster_disk_size   = "250"
     thin_provisioned    = ""      # True or false. Whether to use thin provisioning on the disk. Leave blank to use same as template
     eagerly_scrub       = ""      # True or false. If set to true disk space is zeroed out on VM creation. Leave blank to use same as template

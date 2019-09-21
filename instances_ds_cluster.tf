@@ -11,12 +11,12 @@ resource "vsphere_virtual_machine" "bastion_ds_cluster" {
   #####
   # VM Specifications
   ####
-  count            = "${var.datastore_cluster_id != "" ? var.bastion["nodes"] : 0}"
+  count            = "${var.datastore_cluster_id != "" ? lookup(var.bastion, "nodes", "1") : 0}"
   resource_pool_id = "${var.vsphere_resource_pool_id}"
 
   name      = "${format("${lower(var.instance_name)}-bastion-%02d", count.index + 1) }"
-  num_cpus  = "${var.bastion["vcpu"]}"
-  memory    = "${var.bastion["memory"]}"
+  num_cpus  = "${lookup(var.bastion, "vcpu", "2")}"
+  memory    = "${lookup(var.bastion, "memory", "4096")}"
 
   scsi_controller_count = 1
 
@@ -29,11 +29,20 @@ resource "vsphere_virtual_machine" "bastion_ds_cluster" {
 
   disk {
     label            = "disk0"
-    size             = "${var.bastion["disk_size"]        != "" ? var.bastion["disk_size"]        : data.vsphere_virtual_machine.template.disks.0.size}"
-    eagerly_scrub    = "${var.bastion["eagerly_scrub"]    != "" ? var.bastion["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
-    thin_provisioned = "${var.bastion["thin_provisioned"] != "" ? var.bastion["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
-    keep_on_remove   = "${var.bastion["keep_disk_on_remove"]}"
+    size             = "${lookup(var.bastion, "disk_size", "")        != "" ? lookup(var.bastion, "disk_size", "")        : data.vsphere_virtual_machine.template.disks.0.size}"
+    eagerly_scrub    = "${lookup(var.bastion, "eagerly_scrub", "")    != "" ? lookup(var.bastion, "eagerly_scrub", "")    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+    thin_provisioned = "${lookup(var.bastion, "thin_provisioned", "") != "" ? lookup(var.bastion, "thin_provisioned", "") : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+    keep_on_remove   = "${lookup(var.bastion, "keep_disk_on_remove", "false")}"
     unit_number      = 0
+  }
+
+  disk {
+    label            = "disk1"
+    size             = "${lookup(var.bastion, "docker_disk_size", "100")}"
+    eagerly_scrub    = "${lookup(var.bastion, "eagerly_scrub", "")    != "" ? lookup(var.bastion, "eagerly_scrub", "")    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+    thin_provisioned = "${lookup(var.bastion, "thin_provisioned", "") != "" ? lookup(var.bastion, "thin_provisioned", "") : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+    keep_on_remove   = "${lookup(var.bastion, "keep_disk_on_remove", "false")}"
+    unit_number      = 1
   }
 
   ####
@@ -62,7 +71,7 @@ resource "vsphere_virtual_machine" "bastion_ds_cluster" {
       dynamic "network_interface" {
         for_each = compact(concat(list(var.public_network_id, var.private_network_id)))
         content {
-          ipv4_address = "${element(concat(data.template_file.public_ips.*.rendered, data.template_file.private_ips.*.rendered), network_interface.key)}"
+          ipv4_address = "${element(concat(data.template_file.public_ips.*.rendered, data.template_file.bastion_private_ips.*.rendered), network_interface.key)}"
           ipv4_netmask = "${element(compact(concat(list(var.public_netmask), list(var.private_netmask))), network_interface.key)}"
         }
       }
@@ -106,12 +115,12 @@ resource "vsphere_virtual_machine" "master_ds_cluster" {
   #####
   # VM Specifications
   ####
-  count            = "${var.datastore_cluster_id != "" ? var.master["nodes"] : 0}"
+  count            = "${var.datastore_cluster_id != "" ? lookup(var.master, "nodes", "1") : 0}"
   resource_pool_id = "${var.vsphere_resource_pool_id}"
 
   name      = "${format("${lower(var.instance_name)}-master-%02d", count.index + 1) }"
-  num_cpus  = "${var.master["vcpu"]}"
-  memory    = "${var.master["memory"]}"
+  num_cpus  = "${lookup(var.master, "vcpu", "8")}"
+  memory    = "${lookup(var.master, "memory", "32768")}"
 
   scsi_controller_count = 1
 
@@ -125,19 +134,19 @@ resource "vsphere_virtual_machine" "master_ds_cluster" {
 
   disk {
     label            = "disk0"
-    size             = "${var.master["disk_size"]        != "" ? var.master["disk_size"]        : data.vsphere_virtual_machine.template.disks.0.size}"
-    eagerly_scrub    = "${var.master["eagerly_scrub"]    != "" ? var.master["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
-    thin_provisioned = "${var.master["thin_provisioned"] != "" ? var.master["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
-    keep_on_remove   = "${var.master["keep_disk_on_remove"]}"
+    size             = "${lookup(var.master, "disk_size", "")        != "" ? lookup(var.master, "disk_size", "")        : data.vsphere_virtual_machine.template.disks.0.size}"
+    eagerly_scrub    = "${lookup(var.master, "eagerly_scrub", "")    != "" ? lookup(var.master, "eagerly_scrub", "")    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+    thin_provisioned = "${lookup(var.master, "thin_provisioned", "") != "" ? lookup(var.master, "thin_provisioned", "") : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+    keep_on_remove   = "${lookup(var.master, "keep_disk_on_remove", "false")}"
     unit_number      = 0
   }
 
   disk {
     label            = "disk1"
-    size             = "${var.master["docker_disk_size"]}"
-    eagerly_scrub    = "${var.master["eagerly_scrub"]    != "" ? var.master["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
-    thin_provisioned = "${var.master["thin_provisioned"] != "" ? var.master["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
-    keep_on_remove   = "${var.master["keep_disk_on_remove"]}"
+    size             = "${lookup(var.master, "docker_disk_size", "100")}"
+    eagerly_scrub    = "${lookup(var.master, "eagerly_scrub", "")    != "" ? lookup(var.master, "eagerly_scrub", "")    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+    thin_provisioned = "${lookup(var.master, "thin_provisioned", "") != "" ? lookup(var.master, "thin_provisioned", "") : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+    keep_on_remove   = "${lookup(var.master, "keep_disk_on_remove", "false")}"
     unit_number      = 1
   }
 
@@ -162,7 +171,7 @@ resource "vsphere_virtual_machine" "master_ds_cluster" {
       }
       
       network_interface {
-        ipv4_address  = "${element(data.template_file.private_ips.*.rendered, var.bastion["nodes"] + count.index)}"
+        ipv4_address  = "${element(data.template_file.master_private_ips.*.rendered, count.index)}"
         ipv4_netmask  = "${var.private_netmask}"
       }
 
@@ -207,15 +216,21 @@ resource "vsphere_virtual_machine" "infra_ds_cluster" {
   #depends_on = ["vsphere_folder.ocpenv"]
   folder     = "${var.folder_path}"
 
+  lifecycle {
+    ignore_changes = [
+      "disk"
+    ]
+  }
+
   #####
   # VM Specifications
   ####
-  count            = "${var.datastore_cluster_id != "" ? var.infra["nodes"] : 0}"
+  count            = "${var.datastore_cluster_id != "" ? lookup(var.infra, "nodes", "1") : 0}"
   resource_pool_id = "${var.vsphere_resource_pool_id}"
 
   name     = "${format("${lower(var.instance_name)}-infra-%02d", count.index + 1) }"
-  num_cpus = "${var.infra["vcpu"]}"
-  memory   = "${var.infra["memory"]}"
+  num_cpus = "${lookup(var.infra, "vcpu", "8")}"
+  memory   = "${lookup(var.infra, "memory", "32768")}"
 
 
   ####
@@ -228,19 +243,19 @@ resource "vsphere_virtual_machine" "infra_ds_cluster" {
 
   disk {
     label            = "disk0"
-    size             = "${var.infra["disk_size"]        != "" ? var.infra["disk_size"]        : data.vsphere_virtual_machine.template.disks.0.size}"
-    eagerly_scrub    = "${var.infra["eagerly_scrub"]    != "" ? var.infra["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
-    thin_provisioned = "${var.infra["thin_provisioned"] != "" ? var.infra["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
-    keep_on_remove   = "${var.infra["keep_disk_on_remove"]}"
+    size             = "${lookup(var.infra, "disk_size", "")        != "" ? lookup(var.infra, "disk_size", "")        : data.vsphere_virtual_machine.template.disks.0.size}"
+    eagerly_scrub    = "${lookup(var.infra, "eagerly_scrub", "")    != "" ? lookup(var.infra, "eagerly_scrub", "")    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+    thin_provisioned = "${lookup(var.infra, "thin_provisioned", "") != "" ? lookup(var.infra, "thin_provisioned", "") : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+    keep_on_remove   = "${lookup(var.infra, "keep_disk_on_remove", "false")}"
     unit_number      = 0
   }
 
   disk {
     label            = "disk1"
-    size             = "${var.infra["docker_disk_size"]}"
-    eagerly_scrub    = "${var.infra["eagerly_scrub"]    != "" ? var.infra["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
-    thin_provisioned = "${var.infra["thin_provisioned"] != "" ? var.infra["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
-    keep_on_remove   = "${var.infra["keep_disk_on_remove"]}"
+    size             = "${lookup(var.infra, "docker_disk_size", "100")}"
+    eagerly_scrub    = "${lookup(var.infra, "eagerly_scrub", "")    != "" ? lookup(var.infra, "eagerly_scrub", "")    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+    thin_provisioned = "${lookup(var.infra, "thin_provisioned", "") != "" ? lookup(var.infra, "thin_provisioned", "") : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+    keep_on_remove   = "${lookup(var.infra, "keep_disk_on_remove", "false")}"
     unit_number      = 1
   }
 
@@ -265,10 +280,7 @@ resource "vsphere_virtual_machine" "infra_ds_cluster" {
       }
 
       network_interface {
-        ipv4_address  = "${element(data.template_file.private_ips.*.rendered, 
-          var.bastion["nodes"] + 
-          var.master["nodes"] + 
-          count.index)}"
+        ipv4_address  = "${element(data.template_file.infra_private_ips.*.rendered, count.index)}"
         ipv4_netmask  = "${var.private_netmask}"
       }
 
@@ -311,17 +323,23 @@ resource "vsphere_virtual_machine" "infra_ds_cluster" {
 ##################################
 resource "vsphere_virtual_machine" "worker_ds_cluster" {
   #depends_on = ["vsphere_folder.ocpenv"]
+  lifecycle {
+    ignore_changes = [
+      "disk"
+    ]
+  }
+
   folder     = "${var.folder_path}"
 
   #####
   # VM Specifications
   ####
-  count            = "${var.datastore_cluster_id != "" ? var.worker["nodes"] : 0}"
+  count            = "${var.datastore_cluster_id != "" ? lookup(var.worker, "nodes", "3") : 0}"
   resource_pool_id = "${var.vsphere_resource_pool_id}"
 
   name     = "${format("${lower(var.instance_name)}-worker-%02d", count.index + 1) }"
-  num_cpus = "${var.worker["vcpu"]}"
-  memory   = "${var.worker["memory"]}"
+  num_cpus = "${lookup(var.worker, "vcpu", "4")}"
+  memory   = "${lookup(var.worker, "memory", "16384")}"
 
 
   #####
@@ -334,19 +352,19 @@ resource "vsphere_virtual_machine" "worker_ds_cluster" {
 
   disk {
     label            = "disk0"
-    size             = "${var.worker["disk_size"]        != "" ? var.worker["disk_size"]        : data.vsphere_virtual_machine.template.disks.0.size}"
-    eagerly_scrub    = "${var.worker["eagerly_scrub"]    != "" ? var.worker["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
-    thin_provisioned = "${var.worker["thin_provisioned"] != "" ? var.worker["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
-    keep_on_remove   = "${var.worker["keep_disk_on_remove"]}"
+    size             = "${lookup(var.worker, "disk_size", "")        != "" ? lookup(var.worker, "disk_size", "")        : data.vsphere_virtual_machine.template.disks.0.size}"
+    eagerly_scrub    = "${lookup(var.worker, "eagerly_scrub", "")    != "" ? lookup(var.worker, "eagerly_scrub", "")    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+    thin_provisioned = "${lookup(var.worker, "thin_provisioned", "") != "" ? lookup(var.worker, "thin_provisioned", "") : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+    keep_on_remove   = "${lookup(var.worker, "keep_disk_on_remove", "false")}"
     unit_number      = 0
   }
 
   disk {
     label            = "disk1"
-    size             = "${var.worker["docker_disk_size"]}"
-    eagerly_scrub    = "${var.worker["eagerly_scrub"]    != "" ? var.worker["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
-    thin_provisioned = "${var.worker["thin_provisioned"] != "" ? var.worker["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
-    keep_on_remove   = "${var.worker["keep_disk_on_remove"]}"
+    size             = "${lookup(var.worker, "docker_disk_size", "100")}"
+    eagerly_scrub    = "${lookup(var.worker, "eagerly_scrub", "")    != "" ? lookup(var.worker, "eagerly_scrub", "")    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+    thin_provisioned = "${lookup(var.worker, "thin_provisioned", "") != "" ? lookup(var.worker, "thin_provisioned", "") : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+    keep_on_remove   = "${lookup(var.worker, "keep_disk_on_remove", "false")}"
     unit_number      = 1
   }
 
@@ -372,11 +390,7 @@ resource "vsphere_virtual_machine" "worker_ds_cluster" {
       }
 
       network_interface {
-        ipv4_address  = "${element(data.template_file.private_ips.*.rendered, 
-          var.bastion["nodes"] + 
-          var.master["nodes"] + 
-          var.infra["nodes"] + 
-          count.index)}"
+        ipv4_address  = "${element(data.template_file.worker_private_ips.*.rendered, count.index)}"
         ipv4_netmask  = "${var.private_netmask}"
       }
 
@@ -424,12 +438,12 @@ resource "vsphere_virtual_machine" "storage_ds_cluster" {
   #####
   # VM Specifications
   ####
-  count            = "${var.datastore_cluster_id != "" ? var.storage["nodes"] : 0}"
+  count            = "${var.datastore_cluster_id != "" ? lookup(var.storage, "nodes", "3") : 0}"
   resource_pool_id = "${var.vsphere_resource_pool_id}"
 
   name     = "${format("${lower(var.instance_name)}-storage-%02d", count.index + 1) }"
-  num_cpus = "${var.storage["vcpu"]}"
-  memory   = "${var.storage["memory"]}"
+  num_cpus = "${lookup(var.storage, "vcpu", "8")}"
+  memory   = "${lookup(var.storage, "memory", "16384")}"
 
 
   #####
@@ -442,29 +456,32 @@ resource "vsphere_virtual_machine" "storage_ds_cluster" {
 
   disk {
     label            = "disk0"
-    size             = "${var.storage["disk_size"]        != "" ? var.storage["disk_size"]        : data.vsphere_virtual_machine.template.disks.0.size}"
-    eagerly_scrub    = "${var.storage["eagerly_scrub"]    != "" ? var.storage["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
-    thin_provisioned = "${var.storage["thin_provisioned"] != "" ? var.storage["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
-    keep_on_remove   = "${var.storage["keep_disk_on_remove"]}"
+    size             = "${lookup(var.storage, "disk_size", "")        != "" ? lookup(var.storage, "disk_size", "")        : data.vsphere_virtual_machine.template.disks.0.size}"
+    eagerly_scrub    = "${lookup(var.storage, "eagerly_scrub", "")    != "" ? lookup(var.storage, "eagerly_scrub", "")    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+    thin_provisioned = "${lookup(var.storage, "thin_provisioned", "") != "" ? lookup(var.storage, "thin_provisioned", "") : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+    keep_on_remove   = "${lookup(var.storage, "keep_disk_on_remove", "false")}"
     unit_number      = 0
   }
 
   disk {
     label            = "disk1"
-    size             = "${var.storage["docker_disk_size"]}"
-    eagerly_scrub    = "${var.storage["eagerly_scrub"]    != "" ? var.storage["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
-    thin_provisioned = "${var.storage["thin_provisioned"] != "" ? var.storage["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
-    keep_on_remove   = "${var.storage["keep_disk_on_remove"]}"
+    size             = "${lookup(var.storage, "docker_disk_size", "100")}"
+    eagerly_scrub    = "${lookup(var.storage, "eagerly_scrub", "")    != "" ? lookup(var.storage, "eagerly_scrub", "")    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+    thin_provisioned = "${lookup(var.storage, "thin_provisioned", "") != "" ? lookup(var.storage, "thin_provisioned", "") : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+    keep_on_remove   = "${lookup(var.storage, "keep_disk_on_remove", "false")}"
     unit_number      = 1
   }
 
-  disk {
-    label            = "disk2"
-    size             = "${var.storage["gluster_disk_size"]}"
-    eagerly_scrub    = "${var.storage["eagerly_scrub"]    != "" ? var.storage["eagerly_scrub"]    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
-    thin_provisioned = "${var.storage["thin_provisioned"] != "" ? var.storage["thin_provisioned"] : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
-    keep_on_remove   = "${var.storage["keep_disk_on_remove"]}"
-    unit_number      = 2
+  dynamic "disk" {
+    for_each = [for disk_num in range(lookup(var.storage, "gluster_num_disks", "1")): disk_num + 2]
+    content {
+      label            = "${format("disk%d", disk.value)}"
+      size             = "${lookup(var.storage, "gluster_disk_size", "250")}"
+      eagerly_scrub    = "${lookup(var.storage, "eagerly_scrub", "")    != "" ? lookup(var.storage, "eagerly_scrub", "")    : data.vsphere_virtual_machine.template.disks.0.eagerly_scrub}"
+      thin_provisioned = "${lookup(var.storage, "thin_provisioned", "") != "" ? lookup(var.storage, "thin_provisioned", "") : data.vsphere_virtual_machine.template.disks.0.thin_provisioned}"
+      keep_on_remove   = "${lookup(var.storage, "keep_disk_on_remove", "false")}"
+      unit_number      = disk.value
+    }
   }
 
   ####
@@ -489,12 +506,7 @@ resource "vsphere_virtual_machine" "storage_ds_cluster" {
       }
 
       network_interface {
-        ipv4_address  = "${element(data.template_file.private_ips.*.rendered, 
-          var.bastion["nodes"] + 
-          var.master["nodes"] + 
-          var.infra["nodes"] + 
-          var.worker["nodes"] + 
-          count.index)}"
+        ipv4_address  = "${element(data.template_file.storage_private_ips.*.rendered, count.index)}"
         ipv4_netmask  = "${var.private_netmask}"
       }
 
